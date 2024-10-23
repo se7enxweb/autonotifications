@@ -19,20 +19,21 @@ $script->initialize();
 $userClassIDArray = eZUser::fetchUserClassNames();
 $eventsFound = 0;
 $eventTypeString = 'event_' . AutoNotificationsType::WORKFLOW_TYPE_STRING;
-$userIDArray[] = array();
+$userIDArray = array();
 $workflows = eZWorkflow::fetchList();
 
 foreach ( $workflows as $workflow )
 {
 	$eventList = $workflow->fetchEvents();
+
 	foreach ( $eventList as $event )
 	{
 		if ( $event->TypeString == $eventTypeString )
 		{
 			$eventsFound++;
-			$userGroupObjectIDArray = AutoNotificationsType::attributeDecoder( $event, 'selected_usergroups' );
-			$subtrees = AutoNotificationsType::attributeDecoder( $event, 'selected_subtrees' );
-			
+			$userGroupObjectIDArray = AutoNotificationsType::attributeDecoderInfo( $event, 'selected_usergroups' );
+			$subtrees = AutoNotificationsType::attributeDecoderInfo( $event, 'selected_subtrees' );
+
 			// fetch children of usergroups, foreach child do
 			foreach( $userGroupObjectIDArray as $userGroupObjectID )
 			{
@@ -49,14 +50,16 @@ foreach ( $workflows as $workflow )
 					}
 				}
             }
+	    
             $userIDArray = array_unique( $userIDArray );
-			foreach ( $userIDArray as $userID )
-			{
+            foreach ( $userIDArray as $userID )
+	    {
 				// Set the digest options according to the settings in autonotifications.ini
-				AutoNotificationsType::setDigestOptions( $userID );
+				AutoNotificationsType::setDigestOptionsInfo( $userID );
 
 				// Below causes an SQL error but seems to work. Without this test, existing notifications would be duplicated
 				$notificationNodeIDList = eZSubtreeNotificationRule::fetchNodesForUserID( $userID, false );
+
 				foreach ( $subtrees as $subtreeNodeID )
 				{
 					if ( !in_array( $subtreeNodeID, $notificationNodeIDList ) )

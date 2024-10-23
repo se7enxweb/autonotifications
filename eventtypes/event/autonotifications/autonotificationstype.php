@@ -49,6 +49,33 @@ class AutoNotificationsType extends eZWorkflowEventType
 		return $returnValue;
 	}
 
+	static public function attributeDecoderInfo( $event, $attr )
+	{
+		switch ( $attr )
+		{
+			case 'selected_usergroups':
+			{
+				$attributeValue = trim( $event->attribute( 'data_text1' ) );
+				$returnValue = empty( $attributeValue ) ? array() : explode( ',', $attributeValue );
+			}break;
+
+			case 'selected_subtrees':
+			{
+				$attributeValue = trim( $event->attribute( 'data_text2' ) );
+				$returnValue = empty( $attributeValue ) ? array() : explode( ',', $attributeValue );
+			}break;
+
+			case 'version_option':
+			{
+				$returnValue = AutoNotificationsType::VERSION_OPTION_ALL & $event->attribute( 'data_int3' );
+			}break;
+
+			 default:
+				$returnValue = null;
+		}
+		return $returnValue;
+	}
+
 	function typeFunctionalAttributes( )
 	{
 		return array( 'selected_usergroups', 'selected_subtrees', 'version_option' );
@@ -153,7 +180,7 @@ class AutoNotificationsType extends eZWorkflowEventType
 				$this->setDigestOptions( $objectID );
 			}
 		}
-		return EZ_WORKFLOW_TYPE_STATUS_ACCEPTED;
+		return eZWorkflowType::STATUS_ACCEPTED;
 	}
 
 	function validateHTTPInput( $http, $base, $workflowEvent, &$validation )
@@ -276,6 +303,56 @@ class AutoNotificationsType extends eZWorkflowEventType
 	}
 
 	function setDigestOptions( $userID )
+	{
+		$ini = eZINI::instance( 'autonotifications.ini' );
+		$digestType = $ini->variable( 'DigestSettings', 'DigestType' ); // can be 'None', 'Daily', 'Weekly', 'Monthly'
+		if ( $digestType != 'Skip' )
+		{
+			if ( method_exists( 'eZGeneralDigestUserSettings', 'fetchByUserId' ) )
+			{
+				$settings = eZGeneralDigestUserSettings::fetchByUserId( $userID );
+				if ( $settings == null )
+					$settings = eZGeneralDigestUserSettings::create( $userID );
+			}
+			else // in eZ Publish version 4 the user's email address is the digest key
+			{
+				$user = eZUser::fetch( $userID );
+				$address = $user->Email;
+				$settings = eZGeneralDigestUserSettings::fetchForUser( $address );
+				if ( $settings == null )
+					$settings = eZGeneralDigestUserSettings::create( $address );
+			}
+
+			if ( $digestType == 'None' )
+			{
+				$settings->setAttribute( 'receive_digest', 0 );
+			}
+			else
+			{
+				$settings->setAttribute( 'receive_digest', 1 );
+				switch ( $digestType )
+				{
+					case 'Daily':
+						$settings->setAttribute( 'digest_type', eZGeneralDigestUserSettings::TYPE_DAILY );
+						break;
+
+					case 'Monthly':
+						$settings->setAttribute( 'digest_type', eZGeneralDigestUserSettings::TYPE_MONTHLY );
+						$settings->setAttribute( 'day', $ini->variable( 'DigestSettings', 'MonthDay' ) );
+						break;
+
+					case 'Weekly':
+						$settings->setAttribute( 'digest_type', eZGeneralDigestUserSettings::TYPE_WEEKLY );
+						$settings->setAttribute( 'day', $ini->variable( 'DigestSettings', 'WeekDay' ) );
+						break;
+				}
+				$settings->setAttribute( 'time', $ini->variable( 'DigestSettings', 'Time' ) );
+			}
+			$settings->store();
+		}
+	}
+
+	static public function setDigestOptionsInfo( $userID )
 	{
 		$ini = eZINI::instance( 'autonotifications.ini' );
 		$digestType = $ini->variable( 'DigestSettings', 'DigestType' ); // can be 'None', 'Daily', 'Weekly', 'Monthly'

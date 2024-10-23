@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<software>
+    <metadata>
+        <name>autonotifications</name>
+        <version>1.1.0</version>
+        <copyright>Copyright (C) 1999 - 2024 7x and Andy Caiger and Pierre Martel</copyright>
+        <license>GNU General Public License v2 or later</license>
+        <info_url>https://github.com/se7enxweb/autonotifications</info_url>
+    </metadata>
+</software>
